@@ -52,11 +52,12 @@ fun CreateLogbookScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // Month Field
+            // Date Field (DD/MM/AAAA)
             OutlinedTextField(
                 value = formState.month,
                 onValueChange = viewModel::onMonthChanged,
-                label = { Text("Mes y Año (ej. Marzo 2025)") },
+                label = { Text("Fecha de Bitácora (DD/MM/AAAA)") },
+                placeholder = { Text("ej. 15/03/2025") },
                 leadingIcon = { Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null) },
                 isError = formState.monthError != null,
                 modifier = Modifier.fillMaxWidth(),

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import duoc.cl.data.local.LogbookEntity
 import duoc.cl.data.local.LogbookEntryEntity
 import duoc.cl.data.repository.AppRepository
+import duoc.cl.validaciones.LogbookValidations
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -51,22 +52,22 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     val formState: StateFlow<LogbookFormState> = _formState.asStateFlow()
 
     fun onMonthChanged(value: String) {
-        val error = if (value.isBlank()) "El mes es obligatorio" else null
+        val error = LogbookValidations.validateMonth(value)
         _formState.update { it.copy(month = value, monthError = error).validate() }
     }
 
     fun onTitleChanged(value: String) {
-        val error = if (value.isBlank()) "El título es obligatorio" else null
+        val error = LogbookValidations.validateTitle(value)
         _formState.update { it.copy(title = value, titleError = error).validate() }
     }
 
     fun onPurposeChanged(value: String) {
-        val error = if (value.isBlank()) "El propósito es obligatorio" else null
+        val error = LogbookValidations.validatePurpose(value)
         _formState.update { it.copy(purpose = value, purposeError = error).validate() }
     }
 
     fun onInstructionsChanged(value: String) {
-        val error = if (value.isBlank()) "Las instrucciones son obligatorias" else null
+        val error = LogbookValidations.validateInstructions(value)
         _formState.update { it.copy(instructions = value, instructionsError = error).validate() }
     }
 
@@ -75,8 +76,16 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun LogbookFormState.validate(): LogbookFormState {
-        val valid = month.isNotBlank() && title.isNotBlank() && purpose.isNotBlank() && instructions.isNotBlank() &&
-                monthError == null && titleError == null && purposeError == null && instructionsError == null
+        val valid = LogbookValidations.isLogbookFormValid(
+            month = month,
+            title = title,
+            purpose = purpose,
+            instructions = instructions,
+            monthError = monthError,
+            titleError = titleError,
+            purposeError = purposeError,
+            instructionsError = instructionsError
+        )
         return copy(isFormValid = valid)
     }
 

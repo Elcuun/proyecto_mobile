@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import duoc.cl.data.local.LogbookEntryEntity
 import duoc.cl.data.repository.AppRepository
+import duoc.cl.validaciones.SubmitEntryValidations
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -38,22 +39,22 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
     val entryFormState: StateFlow<EntryFormState> = _entryFormState.asStateFlow()
 
     fun onStudentNameChanged(value: String) {
-        val error = if (value.isBlank()) "Tu nombre y apellido es obligatorio" else null
+        val error = SubmitEntryValidations.validateStudentName(value)
         _entryFormState.update { it.copy(studentName = value, studentNameError = error).validate() }
     }
 
     fun onContentsChanged(value: String) {
-        val error = if (value.isBlank()) "Los contenidos son obligatorios" else null
+        val error = SubmitEntryValidations.validateContents(value)
         _entryFormState.update { it.copy(contents = value, contentsError = error).validate() }
     }
 
     fun onActivitiesChanged(value: String) {
-        val error = if (value.isBlank()) "Las actividades son obligatorias" else null
+        val error = SubmitEntryValidations.validateActivities(value)
         _entryFormState.update { it.copy(activities = value, activitiesError = error).validate() }
     }
 
     fun onLearningsChanged(value: String) {
-        val error = if (value.isBlank()) "Los aprendizajes son obligatorios" else null
+        val error = SubmitEntryValidations.validateLearnings(value)
         _entryFormState.update { it.copy(learnings = value, learningsError = error).validate() }
     }
 
@@ -70,8 +71,16 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun EntryFormState.validate(): EntryFormState {
-        val valid = studentName.isNotBlank() && contents.isNotBlank() && activities.isNotBlank() && learnings.isNotBlank() &&
-                studentNameError == null && contentsError == null && activitiesError == null && learningsError == null
+        val valid = SubmitEntryValidations.isSubmitEntryFormValid(
+            studentName = studentName,
+            contents = contents,
+            activities = activities,
+            learnings = learnings,
+            studentNameError = studentNameError,
+            contentsError = contentsError,
+            activitiesError = activitiesError,
+            learningsError = learningsError
+        )
         return copy(isFormValid = valid)
     }
 

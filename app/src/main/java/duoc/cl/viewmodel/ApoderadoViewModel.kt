@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import duoc.cl.data.local.LogbookEntity
 import duoc.cl.data.local.LogbookEntryEntity
 import duoc.cl.data.repository.AppRepository
+import duoc.cl.validaciones.ApoderadoValidations
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,11 +38,12 @@ class ApoderadoViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun searchStudent() {
-        val name = _studentName.value.trim()
-        val email = _studentEmail.value.trim()
+        val name = _studentName.value
+        val email = _studentEmail.value
 
-        if (name.isBlank() && email.isBlank()) {
-            _errorMessage.value = "Por favor ingrese el nombre o correo del estudiante"
+        val error = ApoderadoValidations.validateStudentSearchQuery(name, email)
+        if (error != null) {
+            _errorMessage.value = error
             return
         }
 

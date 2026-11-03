@@ -1,8 +1,6 @@
 package duoc.cl.ui.student
 
 import android.Manifest
-import android.content.pm.PackageManager
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -18,13 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import com.google.android.gms.location.LocationServices
+import duoc.cl.camara.rememberCameraStateHolder
 import duoc.cl.data.local.LogbookEntity
 import duoc.cl.data.local.User
 import duoc.cl.viewmodel.StudentViewModel
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,28 +35,17 @@ fun SubmitEntryScreen(
     val formState by viewModel.entryFormState.collectAsState()
     val scrollState = rememberScrollState()
 
-    var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
-
     LaunchedEffect(currentUser) {
         if (currentUser != null && formState.studentName.isBlank()) {
             viewModel.onStudentNameChanged(currentUser.fullName)
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) {
-            viewModel.setPhotoUri(tempPhotoUri.toString())
+    val cameraStateHolder = rememberCameraStateHolder(
+        onPhotoCaptured = { uri ->
+            viewModel.setPhotoUri(uri.toString())
         }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            val photoFile = File(context.cacheDir, "evidence_${System.currentTimeMillis()}.jpg")
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
-            tempPhotoUri = uri
-            cameraLauncher.launch(uri)
-        }
-    }
+    )
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -183,14 +168,7 @@ fun SubmitEntryScreen(
             ) {
                 OutlinedButton(
                     onClick = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                            val photoFile = File(context.cacheDir, "evidence_${System.currentTimeMillis()}.jpg")
-                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
-                            tempPhotoUri = uri
-                            cameraLauncher.launch(uri)
-                        } else {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
+                        cameraStateHolder.takePhoto()
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)

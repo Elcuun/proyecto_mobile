@@ -1,12 +1,12 @@
 package duoc.cl.viewmodel
 
 import android.app.Application
-import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import duoc.cl.data.local.Role
 import duoc.cl.data.local.User
 import duoc.cl.data.repository.AppRepository
 import duoc.cl.data.repository.UserRepository
+import duoc.cl.validaciones.LoginValidations
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +60,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _loginState.update {
             it.copy(
                 email = value,
-                emailError = if (value.isBlank()) "El correo es obligatorio" else null,
+                emailError = LoginValidations.validateLoginEmail(value),
                 generalError = null
             )
         }
@@ -70,7 +70,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _loginState.update {
             it.copy(
                 password = value,
-                passwordError = if (value.isBlank()) "La contraseña es obligatoria" else null,
+                passwordError = LoginValidations.validateLoginPassword(value),
                 generalError = null
             )
         }
@@ -81,22 +81,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val email = state.email.trim()
         val password = state.password.trim()
 
-        var isValid = true
-        var emailErr: String? = null
-        var passErr: String? = null
-
-        if (email.isBlank()) {
-            emailErr = "El correo electrónico es obligatorio"
-            isValid = false
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailErr = "Ingrese un correo electrónico válido"
-            isValid = false
-        }
-
-        if (password.isBlank()) {
-            passErr = "La contraseña es obligatoria"
-            isValid = false
-        }
+        val emailErr = LoginValidations.validateLoginEmail(email)
+        val passErr = LoginValidations.validateLoginPassword(password)
+        val isValid = emailErr == null && passErr == null
 
         if (!isValid) {
             _loginState.update { it.copy(emailError = emailErr, passwordError = passErr) }
@@ -128,7 +115,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _registerState.update {
             it.copy(
                 firstName = value,
-                firstNameError = if (value.isBlank()) "El nombre es obligatorio" else null,
+                firstNameError = LoginValidations.validateFirstName(value),
                 generalError = null
             )
         }
@@ -138,7 +125,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _registerState.update {
             it.copy(
                 lastName = value,
-                lastNameError = if (value.isBlank()) "El apellido es obligatorio" else null,
+                lastNameError = LoginValidations.validateLastName(value),
                 generalError = null
             )
         }
@@ -148,7 +135,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _registerState.update {
             it.copy(
                 email = value,
-                emailError = if (value.isBlank()) "El correo es obligatorio" else null,
+                emailError = LoginValidations.validateRegisterEmail(value),
                 generalError = null
             )
         }
@@ -158,7 +145,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _registerState.update {
             it.copy(
                 password = value,
-                passwordError = if (value.length < 6) "Mínimo 6 caracteres" else null,
+                passwordError = LoginValidations.validateRegisterPassword(value),
                 generalError = null
             )
         }
@@ -168,7 +155,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _registerState.update {
             it.copy(
                 confirmPassword = value,
-                confirmPasswordError = if (value != _registerState.value.password) "Las contraseñas no coinciden" else null,
+                confirmPasswordError = LoginValidations.validateConfirmPassword(_registerState.value.password, value),
                 generalError = null
             )
         }
@@ -193,46 +180,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val confirmPassword = state.confirmPassword
         val courseId = state.selectedCourseId
 
-        var isValid = true
-        var fNameErr: String? = null
-        var lNameErr: String? = null
-        var emailErr: String? = null
-        var passErr: String? = null
-        var confirmErr: String? = null
-        var courseErr: String? = null
+        val fNameErr = LoginValidations.validateFirstName(firstName)
+        val lNameErr = LoginValidations.validateLastName(lastName)
+        val emailErr = LoginValidations.validateRegisterEmail(email)
+        val passErr = LoginValidations.validateRegisterPassword(password)
+        val confirmErr = LoginValidations.validateConfirmPassword(password, confirmPassword)
+        val courseErr = LoginValidations.validateCourseSelection(role, courseId)
 
-        if (firstName.isBlank()) {
-            fNameErr = "El nombre es obligatorio"
-            isValid = false
-        }
-
-        if (lastName.isBlank()) {
-            lNameErr = "El apellido es obligatorio"
-            isValid = false
-        }
-
-        if (email.isBlank()) {
-            emailErr = "El correo electrónico es obligatorio"
-            isValid = false
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailErr = "Ingrese un correo electrónico válido"
-            isValid = false
-        }
-
-        if (password.length < 6) {
-            passErr = "La contraseña debe tener al menos 6 caracteres"
-            isValid = false
-        }
-
-        if (confirmPassword != password) {
-            confirmErr = "Las contraseñas no coinciden"
-            isValid = false
-        }
-
-        if (role == Role.ALUMNO && courseId == null) {
-            courseErr = "Debe seleccionar un curso al registrarse como estudiante"
-            isValid = false
-        }
+        val isValid = fNameErr == null && lNameErr == null && emailErr == null &&
+                passErr == null && confirmErr == null && courseErr == null
 
         if (!isValid) {
             _registerState.update {
