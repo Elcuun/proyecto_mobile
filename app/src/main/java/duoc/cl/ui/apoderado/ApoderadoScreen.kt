@@ -29,10 +29,11 @@ fun ApoderadoScreen(
     viewModel: ApoderadoViewModel,
     onNavigateBack: () -> Unit
 ) {
-    val studentName by viewModel.studentName.collectAsState()
-    val studentEmail by viewModel.studentEmail.collectAsState()
-    val isSearchSubmitted by viewModel.isSearchSubmitted.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val studentName = uiState.studentName
+    val studentEmail = uiState.studentEmail
+    val isSearchSubmitted = uiState.isSearchSubmitted
+    val errorMessage = uiState.errorMessage
 
     val entriesWithLogbooks by if (isSearchSubmitted) {
         viewModel.getStudentEntries().collectAsState(initial = emptyList())

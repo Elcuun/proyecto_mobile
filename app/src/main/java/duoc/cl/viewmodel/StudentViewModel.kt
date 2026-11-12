@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import duoc.cl.data.local.LogbookEntryEntity
 import duoc.cl.data.repository.AppRepository
+import duoc.cl.ui.student.EntryFormState
 import duoc.cl.validaciones.SubmitEntryValidations
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -18,22 +19,6 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
     fun getLogbooks(courseId: Long, subjectId: Long) = repository.getLogbooks(courseId, subjectId)
 
     fun getEntriesForLogbook(logbookId: Long) = repository.getEntriesByLogbook(logbookId)
-
-    data class EntryFormState(
-        val studentName: String = "",
-        val contents: String = "",
-        val activities: String = "",
-        val learnings: String = "",
-        val doubts: String = "",
-        val photoUri: String? = null,
-        val latitude: Double? = null,
-        val longitude: Double? = null,
-        val studentNameError: String? = null,
-        val contentsError: String? = null,
-        val activitiesError: String? = null,
-        val learningsError: String? = null,
-        val isFormValid: Boolean = false
-    )
 
     private val _entryFormState = MutableStateFlow(EntryFormState())
     val entryFormState: StateFlow<EntryFormState> = _entryFormState.asStateFlow()

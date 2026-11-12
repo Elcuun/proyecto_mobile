@@ -6,6 +6,8 @@ import duoc.cl.data.local.Role
 import duoc.cl.data.local.User
 import duoc.cl.data.repository.AppRepository
 import duoc.cl.data.repository.UserRepository
+import duoc.cl.ui.auth.LoginFormState
+import duoc.cl.ui.auth.RegisterFormState
 import duoc.cl.validaciones.LoginValidations
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,36 +22,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val currentUser: StateFlow<User?> = userRepository.currentUser
     val courses = appRepository.courses
 
-    // Login Form State
-    data class LoginFormState(
-        val email: String = "",
-        val password: String = "",
-        val emailError: String? = null,
-        val passwordError: String? = null,
-        val generalError: String? = null,
-        val isLoading: Boolean = false
-    )
-
     private val _loginState = MutableStateFlow(LoginFormState())
     val loginState: StateFlow<LoginFormState> = _loginState.asStateFlow()
-
-    // Registration Form State
-    data class RegisterFormState(
-        val firstName: String = "",
-        val lastName: String = "",
-        val email: String = "",
-        val password: String = "",
-        val confirmPassword: String = "",
-        val selectedCourseId: Long? = null,
-        val firstNameError: String? = null,
-        val lastNameError: String? = null,
-        val emailError: String? = null,
-        val passwordError: String? = null,
-        val confirmPasswordError: String? = null,
-        val courseError: String? = null,
-        val generalError: String? = null,
-        val isLoading: Boolean = false
-    )
 
     private val _registerState = MutableStateFlow(RegisterFormState())
     val registerState: StateFlow<RegisterFormState> = _registerState.asStateFlow()

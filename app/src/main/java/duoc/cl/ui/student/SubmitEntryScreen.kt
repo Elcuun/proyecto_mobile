@@ -1,9 +1,13 @@
 package duoc.cl.ui.student
 
 import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,10 +16,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import duoc.cl.camara.rememberCameraStateHolder
 import duoc.cl.data.local.LogbookEntity
@@ -41,11 +49,30 @@ fun SubmitEntryScreen(
         }
     }
 
-    val cameraStateHolder = rememberCameraStateHolder(
+    val cameraController = rememberCameraStateHolder(
         onPhotoCaptured = { uri ->
-            viewModel.setPhotoUri(uri.toString())
+            viewModel.setPhotoUri(uri?.toString())
         }
     )
+
+    val photoBitmap = remember(formState.photoUri) {
+        val uriStr = formState.photoUri ?: return@remember null
+        try {
+            val uri = Uri.parse(uriStr)
+            val inputStream = context.contentResolver.openInputStream(uri)
+            BitmapFactory.decodeStream(inputStream)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraController.launcher.launch(null)
+        }
+    }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -168,7 +195,15 @@ fun SubmitEntryScreen(
             ) {
                 OutlinedButton(
                     onClick = {
-                        cameraStateHolder.takePhoto()
+                        val permissionCheck = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.CAMERA
+                        )
+                        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                            cameraController.launcher.launch(null)
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
@@ -190,6 +225,32 @@ fun SubmitEntryScreen(
                     Icon(imageVector = Icons.Default.LocationOn, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = if (formState.latitude != null) "GPS OK" else "Obtener GPS")
+                }
+            }
+
+            AnimatedVisibility(visible = formState.photoUri != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (photoBitmap != null) {
+                            Image(
+                                bitmap = photoBitmap.asImageBitmap(),
+                                contentDescription = "Foto capturada",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text("Foto adjuntada exitosamente")
+                        }
+                    }
                 }
             }
 

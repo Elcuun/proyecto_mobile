@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import duoc.cl.data.local.LogbookEntity
 import duoc.cl.data.local.LogbookEntryEntity
 import duoc.cl.data.repository.AppRepository
+import duoc.cl.ui.teacher.LogbookFormState
 import duoc.cl.validaciones.LogbookValidations
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -34,19 +35,6 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     fun getEntries(logbookId: Long): Flow<List<LogbookEntryEntity>> {
         return repository.getEntriesByLogbook(logbookId)
     }
-
-    data class LogbookFormState(
-        val month: String = "",
-        val title: String = "",
-        val purpose: String = "",
-        val instructions: String = "",
-        val guidingQuestions: String = "",
-        val monthError: String? = null,
-        val titleError: String? = null,
-        val purposeError: String? = null,
-        val instructionsError: String? = null,
-        val isFormValid: Boolean = false
-    )
 
     private val _formState = MutableStateFlow(LogbookFormState())
     val formState: StateFlow<LogbookFormState> = _formState.asStateFlow()
