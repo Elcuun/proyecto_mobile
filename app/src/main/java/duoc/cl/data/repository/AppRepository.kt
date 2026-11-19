@@ -2,14 +2,22 @@ package duoc.cl.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import duoc.cl.api.RetrofitClient
+import duoc.cl.api.model.EntryRequest
+import duoc.cl.api.model.LogbookRequest
+import duoc.cl.api.model.ReviewRequest
 import duoc.cl.data.local.Course
 import duoc.cl.data.local.LogbookEntity
 import duoc.cl.data.local.LogbookEntryEntity
 import duoc.cl.data.local.Subject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -43,6 +51,27 @@ class AppRepository private constructor(context: Context) {
     init {
         loadLogbooks()
         loadEntries()
+        syncCatalogFromApi()
+    }
+
+    private fun syncCatalogFromApi() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val coursesResp = RetrofitClient.apiService.getCourses()
+                if (coursesResp.isSuccessful && !coursesResp.body().isNullOrEmpty()) {
+                    val apiCourses = coursesResp.body()!!.map { Course(it.id, it.name) }
+                    _courses.value = apiCourses
+                }
+
+                val subjectsResp = RetrofitClient.apiService.getSubjects()
+                if (subjectsResp.isSuccessful && !subjectsResp.body().isNullOrEmpty()) {
+                    val apiSubjects = subjectsResp.body()!!.map { Subject(it.id, it.name) }
+                    _subjects.value = apiSubjects
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     // --- LOGBOOKS PERSISTENCE ---
@@ -249,16 +278,47 @@ class AppRepository private constructor(context: Context) {
         return _logbooks.map { list -> list.filter { it.courseId == courseId && it.subjectId == subjectId } }
     }
 
-    suspend fun insertLogbook(logbook: LogbookEntity): Long {
-        val newLogbook = logbook.copy(id = System.currentTimeMillis())
+    suspend fun insertLogbook(logbook: LogbookEntity): Long = withContext(Dispatchers.IO) {
+        var newId = System.currentTimeMillis()
+        try {
+            val response = RetrofitClient.apiService.createLogbook(
+                token = RetrofitClient.authToken,
+                request = LogbookRequest(
+                    courseId = logbook.courseId,
+                    subjectId = logbook.subjectId,
+                    month = logbook.month,
+                    title = logbook.title,
+                    purpose = logbook.purpose,
+                    instructions = logbook.instructions,
+                    guidingQuestions = logbook.guidingQuestions
+                )
+            )
+            if (response.isSuccessful && response.body() != null) {
+                newId = response.body()!!.id
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        val newLogbook = logbook.copy(id = newId)
         val current = _logbooks.value.toMutableList()
         current.add(newLogbook)
         _logbooks.value = current
         saveLogbooksToPrefs(current)
-        return newLogbook.id
+        return@withContext newId
     }
 
-    suspend fun updateLogbook(logbook: LogbookEntity) {
+    suspend fun updateLogbook(logbook: LogbookEntity) = withContext(Dispatchers.IO) {
+        try {
+            RetrofitClient.apiService.updateLogbookStatus(
+                token = RetrofitClient.authToken,
+                id = logbook.id,
+                closed = logbook.isClosed
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val current = _logbooks.value.toMutableList()
         val index = current.indexOfFirst { it.id == logbook.id }
         if (index != -1) {
@@ -268,7 +328,7 @@ class AppRepository private constructor(context: Context) {
         }
     }
 
-    suspend fun deleteLogbook(id: Long) {
+    suspend fun deleteLogbook(id: Long) = withContext(Dispatchers.IO) {
         val currentLogbooks = _logbooks.value.toMutableList()
         currentLogbooks.removeAll { it.id == id }
         _logbooks.value = currentLogbooks
@@ -311,16 +371,52 @@ class AppRepository private constructor(context: Context) {
         return _subjects.value.firstOrNull { it.id == subjectId }
     }
 
-    suspend fun insertEntry(entry: LogbookEntryEntity): Long {
-        val newEntry = entry.copy(id = System.currentTimeMillis())
+    suspend fun insertEntry(entry: LogbookEntryEntity): Long = withContext(Dispatchers.IO) {
+        var newId = System.currentTimeMillis()
+        try {
+            val response = RetrofitClient.apiService.createEntry(
+                token = RetrofitClient.authToken,
+                id = entry.logbookId,
+                request = EntryRequest(
+                    studentName = entry.studentName,
+                    contents = entry.contents,
+                    activities = entry.activities,
+                    learnings = entry.learnings,
+                    doubts = entry.doubts,
+                    photoUri = entry.photoUri,
+                    latitude = entry.latitude,
+                    longitude = entry.longitude
+                )
+            )
+            if (response.isSuccessful && response.body() != null) {
+                newId = response.body()!!.id
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        val newEntry = entry.copy(id = newId)
         val current = _entries.value.toMutableList()
         current.add(newEntry)
         _entries.value = current
         saveEntriesToPrefs(current)
-        return newEntry.id
+        return@withContext newId
     }
 
-    suspend fun updateEntry(entry: LogbookEntryEntity) {
+    suspend fun updateEntry(entry: LogbookEntryEntity) = withContext(Dispatchers.IO) {
+        try {
+            RetrofitClient.apiService.reviewEntry(
+                token = RetrofitClient.authToken,
+                id = entry.id,
+                request = ReviewRequest(
+                    feedback = entry.feedback,
+                    isReviewed = entry.isReviewed
+                )
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val current = _entries.value.toMutableList()
         val index = current.indexOfFirst { it.id == entry.id }
         if (index != -1) {

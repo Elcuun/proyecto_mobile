@@ -2,6 +2,7 @@ package duoc.cl.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import duoc.cl.data.local.Role
 import duoc.cl.data.local.User
 import duoc.cl.data.repository.AppRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -64,23 +66,25 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        _loginState.update { it.copy(isLoading = true, generalError = null) }
+        viewModelScope.launch {
+            _loginState.update { it.copy(isLoading = true, generalError = null) }
 
-        val result = userRepository.login(email, password, role)
-        result.fold(
-            onSuccess = {
-                _loginState.update { LoginFormState() }
-                onSuccess()
-            },
-            onFailure = { error ->
-                _loginState.update {
-                    it.copy(
-                        isLoading = false,
-                        generalError = error.message ?: "Error al iniciar sesión"
-                    )
+            val result = userRepository.login(email, password, role)
+            result.fold(
+                onSuccess = {
+                    _loginState.update { LoginFormState() }
+                    onSuccess()
+                },
+                onFailure = { error ->
+                    _loginState.update {
+                        it.copy(
+                            isLoading = false,
+                            generalError = error.message ?: "Error al iniciar sesión"
+                        )
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     // --- Register Handlers ---
@@ -178,31 +182,33 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        _registerState.update { it.copy(isLoading = true, generalError = null) }
+        viewModelScope.launch {
+            _registerState.update { it.copy(isLoading = true, generalError = null) }
 
-        val result = userRepository.register(
-            firstName = firstName,
-            lastName = lastName,
-            email = email,
-            password = password,
-            role = role,
-            courseId = if (role == Role.ALUMNO) courseId else null
-        )
+            val result = userRepository.register(
+                firstName = firstName,
+                lastName = lastName,
+                email = email,
+                password = password,
+                role = role,
+                courseId = if (role == Role.ALUMNO) courseId else null
+            )
 
-        result.fold(
-            onSuccess = {
-                _registerState.update { RegisterFormState() }
-                onSuccess()
-            },
-            onFailure = { error ->
-                _registerState.update {
-                    it.copy(
-                        isLoading = false,
-                        generalError = error.message ?: "Error al registrar la cuenta"
-                    )
+            result.fold(
+                onSuccess = {
+                    _registerState.update { RegisterFormState() }
+                    onSuccess()
+                },
+                onFailure = { error ->
+                    _registerState.update {
+                        it.copy(
+                            isLoading = false,
+                            generalError = error.message ?: "Error al registrar la cuenta"
+                        )
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     fun logout() {
