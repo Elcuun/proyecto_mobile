@@ -36,6 +36,12 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         return repository.getEntriesByLogbook(logbookId)
     }
 
+    fun refreshEntries(logbookId: Long) {
+        viewModelScope.launch {
+            repository.fetchEntriesByLogbook(logbookId)
+        }
+    }
+
     private val _formState = MutableStateFlow(LogbookFormState())
     val formState: StateFlow<LogbookFormState> = _formState.asStateFlow()
 

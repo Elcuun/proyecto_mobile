@@ -37,11 +37,8 @@ fun ApoderadoScreen(
     val isSearchSubmitted = uiState.isSearchSubmitted
     val errorMessage = uiState.errorMessage
 
-    val entriesWithLogbooks by if (isSearchSubmitted) {
-        viewModel.getStudentEntries().collectAsState(initial = emptyList())
-    } else {
-        remember { mutableStateOf(emptyList()) }
-    }
+    val entriesWithLogbooks = uiState.entries
+    val isLoading = uiState.isLoading
 
     Scaffold(
         topBar = {
@@ -209,7 +206,38 @@ fun ApoderadoScreen(
                     fontWeight = FontWeight.Bold
                 )
 
-                if (entriesWithLogbooks.isEmpty()) {
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (!errorMessage.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else if (entriesWithLogbooks.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

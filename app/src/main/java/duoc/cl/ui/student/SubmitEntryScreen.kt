@@ -248,6 +248,7 @@ fun SubmitEntryScreen(
                                 contentDescription = "Foto capturada",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
+                                ///aqui es el cambio a fit en caso de  papuuuu
                             )
                         } else {
                             Text("Foto adjuntada exitosamente")

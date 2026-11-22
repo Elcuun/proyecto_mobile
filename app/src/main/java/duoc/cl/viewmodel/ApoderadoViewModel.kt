@@ -2,16 +2,15 @@ package duoc.cl.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import duoc.cl.data.local.LogbookEntity
-import duoc.cl.data.local.LogbookEntryEntity
+import androidx.lifecycle.viewModelScope
 import duoc.cl.data.repository.AppRepository
 import duoc.cl.ui.apoderado.ApoderadoUiState
 import duoc.cl.validaciones.ApoderadoValidations
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class ApoderadoViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -35,23 +34,26 @@ class ApoderadoViewModel(application: Application) : AndroidViewModel(applicatio
 
         val error = ApoderadoValidations.validateStudentSearchQuery(name, email)
         if (error != null) {
-            _uiState.update { it.copy(errorMessage = error) }
+            _uiState.update { it.copy(errorMessage = error, isSearchSubmitted = false) }
             return
         }
 
-        _uiState.update { it.copy(errorMessage = null, isSearchSubmitted = true) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, isSearchSubmitted = true, entries = emptyList()) }
+            val result = repository.searchGuardianEntries(name, email)
+            result.fold(
+                onSuccess = { list ->
+                    _uiState.update { it.copy(isLoading = false, entries = list, errorMessage = null) }
+                },
+                onFailure = { err ->
+                    _uiState.update { it.copy(isLoading = false, entries = emptyList(), errorMessage = err.message ?: "Error al consultar entregas del estudiante") }
+                }
+            )
+        }
     }
 
     fun resetSearch() {
-        _uiState.update { it.copy(isSearchSubmitted = false) }
-    }
-
-    fun getStudentEntries(): Flow<List<Pair<LogbookEntity, LogbookEntryEntity>>> {
-        val state = _uiState.value
-        val nameQuery = state.studentName.trim()
-        val emailQuery = state.studentEmail.trim()
-        val query = if (nameQuery.isNotBlank()) nameQuery else emailQuery
-        return repository.getEntriesByStudentQuery(query)
+        _uiState.update { it.copy(isSearchSubmitted = false, entries = emptyList(), errorMessage = null) }
     }
 
     fun getCourseName(courseId: Long): String {

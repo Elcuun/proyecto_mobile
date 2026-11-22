@@ -179,40 +179,12 @@ class AppRepository private constructor(context: Context) {
     private fun loadEntries() {
         val jsonString = prefs.getString(KEY_ENTRIES, null)
         if (jsonString.isNullOrBlank()) {
-            val initial = getInitialEntries()
-            _entries.value = initial
-            saveEntriesToPrefs(initial)
+            _entries.value = emptyList()
+            saveEntriesToPrefs(emptyList())
         } else {
             val list = parseEntriesJson(jsonString)
             _entries.value = list
         }
-    }
-
-    private fun getInitialEntries(): List<LogbookEntryEntity> {
-        return listOf(
-            LogbookEntryEntity(
-                id = 1001L,
-                logbookId = 101L,
-                studentName = "Ignacia Soto",
-                contents = "Fracciones propias e impropias",
-                activities = "Ejercicios prácticos en guía de trabajo y pizarra.",
-                learnings = "Comprendí cómo amplificar y simplificar fracciones.",
-                doubts = "Me costó un poco la suma con distinto denominador.",
-                isReviewed = true,
-                feedback = "¡Muy buen trabajo Ignacia! Repasaremos mínimo común múltiplo la próxima clase."
-            ),
-            LogbookEntryEntity(
-                id = 1002L,
-                logbookId = 102L,
-                studentName = "Lucas Pérez",
-                contents = "Cadenas tróficas y flujo de energía",
-                activities = "Esquema y análisis de red alimentaria en la reserva nacional.",
-                learnings = "Entendí que los productores son la base de todo ecosistema.",
-                doubts = "¿Qué ocurre cuando una especie clave desaparece?",
-                isReviewed = false,
-                feedback = null
-            )
-        )
     }
 
     private fun parseEntriesJson(jsonString: String): List<LogbookEntryEntity> {
@@ -346,6 +318,117 @@ class AppRepository private constructor(context: Context) {
 
     fun getEntriesByLogbook(logbookId: Long): Flow<List<LogbookEntryEntity>> {
         return _entries.map { list -> list.filter { it.logbookId == logbookId } }
+    }
+
+    suspend fun fetchEntriesByLogbook(logbookId: Long): List<LogbookEntryEntity> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.apiService.getEntriesByLogbook(
+                    token = RetrofitClient.authToken,
+                    id = logbookId
+                )
+                if (response.isSuccessful && response.body() != null) {
+                    val apiEntries = response.body()!!.map { entry ->
+                        LogbookEntryEntity(
+                            id = entry.id,
+                            logbookId = entry.logbookId,
+                            studentName = entry.studentName,
+                            contents = entry.contents,
+                            activities = entry.activities,
+                            learnings = entry.learnings,
+                            doubts = entry.doubts ?: "",
+                            photoUri = entry.photoUri,
+                            latitude = entry.latitude,
+                            longitude = entry.longitude,
+                            feedback = entry.feedback,
+                            isReviewed = entry.isReviewed,
+                            createdAt = entry.createdAt?.toLongOrNull() ?: System.currentTimeMillis()
+                        )
+                    }
+                    val current = _entries.value.toMutableList()
+                    current.removeAll { it.logbookId == logbookId }
+                    current.addAll(apiEntries)
+                    _entries.value = current
+                    saveEntriesToPrefs(current)
+                    apiEntries
+                } else {
+                    _entries.value.filter { it.logbookId == logbookId }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _entries.value.filter { it.logbookId == logbookId }
+            }
+        }
+    }
+
+    suspend fun searchGuardianEntries(name: String, email: String): Result<List<Pair<LogbookEntity, LogbookEntryEntity>>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val cleanEmail = email.trim()
+                val cleanName = name.trim()
+                val response = RetrofitClient.apiService.searchGuardianEntries(
+                    token = RetrofitClient.authToken,
+                    name = if (cleanName.isBlank()) null else cleanName,
+                    email = if (cleanEmail.isBlank()) null else cleanEmail
+                )
+                if (response.isSuccessful && response.body() != null) {
+                    val apiEntries = response.body()!!
+                    if (apiEntries.isEmpty()) {
+                        return@withContext Result.failure(Exception("No se encontraron entregas para el estudiante consultado."))
+                    }
+                    val results = mutableListOf<Pair<LogbookEntity, LogbookEntryEntity>>()
+                    for (entryResponse in apiEntries) {
+                        val entry = LogbookEntryEntity(
+                            id = entryResponse.id,
+                            logbookId = entryResponse.logbookId,
+                            studentName = entryResponse.studentName,
+                            contents = entryResponse.contents,
+                            activities = entryResponse.activities,
+                            learnings = entryResponse.learnings,
+                            doubts = entryResponse.doubts ?: "",
+                            photoUri = entryResponse.photoUri,
+                            latitude = entryResponse.latitude,
+                            longitude = entryResponse.longitude,
+                            feedback = entryResponse.feedback,
+                            isReviewed = entryResponse.isReviewed,
+                            createdAt = entryResponse.createdAt?.toLongOrNull() ?: System.currentTimeMillis()
+                        )
+                        var logbook = _logbooks.value.firstOrNull { it.id == entry.logbookId }
+                        if (logbook == null) {
+                            val lbResponse = RetrofitClient.apiService.getLogbookById(entry.logbookId)
+                            if (lbResponse.isSuccessful && lbResponse.body() != null) {
+                                val lbBody = lbResponse.body()!!
+                                logbook = LogbookEntity(
+                                    id = lbBody.id,
+                                    courseId = lbBody.courseId,
+                                    subjectId = lbBody.subjectId,
+                                    month = lbBody.month,
+                                    title = lbBody.title,
+                                    purpose = lbBody.purpose,
+                                    instructions = lbBody.instructions,
+                                    guidingQuestions = lbBody.guidingQuestions ?: "",
+                                    isClosed = lbBody.isClosed,
+                                    createdAt = lbBody.createdAt?.toLongOrNull() ?: System.currentTimeMillis()
+                                )
+                            }
+                        }
+                        if (logbook != null) {
+                            results.add(logbook to entry)
+                        }
+                    }
+                    Result.success(results)
+                } else {
+                    val errorMsg = when (response.code()) {
+                        401 -> "Sesión no autorizada o token inválido."
+                        404 -> "No se encontró información del alumno."
+                        else -> "Error en el servidor (${response.code()})."
+                    }
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Error de conexión: ${e.localizedMessage ?: "Verifique su red"}"))
+            }
+        }
     }
 
     fun getEntriesByStudentQuery(studentQuery: String): Flow<List<Pair<LogbookEntity, LogbookEntryEntity>>> {

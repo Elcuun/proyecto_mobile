@@ -23,6 +23,10 @@ fun LogbookDetailScreen(
     viewModel: TeacherViewModel,
     onBack: () -> Unit
 ) {
+    LaunchedEffect(logbook.id) {
+        viewModel.refreshEntries(logbook.id)
+    }
+
     val entries by viewModel.getEntries(logbook.id).collectAsState(initial = emptyList())
     var selectedEntryForFeedback by remember { mutableStateOf<LogbookEntryEntity?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
