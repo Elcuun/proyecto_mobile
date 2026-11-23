@@ -39,11 +39,22 @@ kover {
         filters {
             excludes {
                 classes(
-                    "duoc.cl.ui.*",
-                    "duoc.cl.ui.theme.*",
+                    "duoc.cl.MainActivity*",
+                    "duoc.cl.camara.*",
+                    "duoc.cl.ui.Navigation*",
                     "duoc.cl.ui.components.*",
-                    "duoc.cl.MainActivity",
-                    "duoc.cl.ui.Navigation*"
+                    "duoc.cl.ui.theme.*",
+                    "duoc.cl.ui.role.*",
+                    "duoc.cl.ui.auth.LoginScreen*",
+                    "duoc.cl.ui.auth.RegisterScreen*",
+                    "duoc.cl.ui.student.StudentScreen*",
+                    "duoc.cl.ui.student.SubmitEntryScreen*",
+                    "duoc.cl.ui.teacher.TeacherScreen*",
+                    "duoc.cl.ui.teacher.CreateLogbookScreen*",
+                    "duoc.cl.ui.teacher.LogbookDetailScreen*",
+                    "duoc.cl.ui.apoderado.ApoderadoScreen*",
+                    "duoc.cl.api.RetrofitClient*",
+                    "duoc.cl.api.ApiService*"
                 )
             }
         }
@@ -70,6 +81,11 @@ dependencies {
     implementation(libs.okhttp.logging)
 
     testImplementation(libs.junit)
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("org.mockito:mockito-core:5.14.2")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

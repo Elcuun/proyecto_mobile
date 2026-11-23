@@ -1,28 +1,80 @@
 package duoc.cl.validaciones
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Clase de pruebas unitarias para validar las consultas de los apoderados
- * implementada en [ApoderadoValidations].
+ * Pruebas unitarias para [ApoderadoValidations] siguiendo el patrón Arrange-Act-Assert (AAA)
+ * de acuerdo a las directrices de Guía Testing Android.
  */
 class ApoderadoValidationsTest {
 
-    /**
-     * Prueba la validación de la consulta de búsqueda de estudiantes por parte del apoderado.
-     * Verifica que si ambos campos (nombre y correo) están vacíos retorne un mensaje de error,
-     * y si al menos uno de los dos está presente permita realizar la búsqueda (retorne null).
-     */
     @Test
-    fun testStudentSearchQueryValidation() {
-        // Ambos campos vacíos (debe retornar error)
-        assertNotNull(ApoderadoValidations.validateStudentSearchQuery("", ""))
-        // Solo nombre presente (válido, retorna null)
-        assertNull(ApoderadoValidations.validateStudentSearchQuery("Ignacia Soto", ""))
-        // Solo correo presente (válido, retorna null)
-        assertNull(ApoderadoValidations.validateStudentSearchQuery("", "estudiante@duoc.cl"))
-        // Nombre y correo presentes (válido, retorna null)
-        assertNull(ApoderadoValidations.validateStudentSearchQuery("Ignacia Soto", "estudiante@duoc.cl"))
+    fun validateStudentSearchQuery_ambosCamposVacios_retornaMensajeDeError() {
+        // ARRANGE
+        val name = ""
+        val email = ""
+
+        // ACT
+        val result = ApoderadoValidations.validateStudentSearchQuery(name, email)
+
+        // ASSERT
+        assertNotNull(result)
+        assertEquals("Debe ingresar al menos el nombre o el correo del estudiante.", result)
+    }
+
+    @Test
+    fun validateStudentSearchQuery_ambosCamposSoloEspacios_retornaMensajeDeError() {
+        // ARRANGE
+        val name = "   "
+        val email = "  \t "
+
+        // ACT
+        val result = ApoderadoValidations.validateStudentSearchQuery(name, email)
+
+        // ASSERT
+        assertNotNull(result)
+        assertEquals("Debe ingresar al menos el nombre o el correo del estudiante.", result)
+    }
+
+    @Test
+    fun validateStudentSearchQuery_soloNombrePresente_retornaNull() {
+        // ARRANGE
+        val name = "Ignacia Soto"
+        val email = ""
+
+        // ACT
+        val result = ApoderadoValidations.validateStudentSearchQuery(name, email)
+
+        // ASSERT
+        assertNull(result)
+    }
+
+    @Test
+    fun validateStudentSearchQuery_soloEmailPresente_retornaNull() {
+        // ARRANGE
+        val name = ""
+        val email = "estudiante@duoc.cl"
+
+        // ACT
+        val result = ApoderadoValidations.validateStudentSearchQuery(name, email)
+
+        // ASSERT
+        assertNull(result)
+    }
+
+    @Test
+    fun validateStudentSearchQuery_ambosCamposPresentes_retornaNull() {
+        // ARRANGE
+        val name = "Ignacia Soto"
+        val email = "estudiante@duoc.cl"
+
+        // ACT
+        val result = ApoderadoValidations.validateStudentSearchQuery(name, email)
+
+        // ASSERT
+        assertNull(result)
     }
 }
