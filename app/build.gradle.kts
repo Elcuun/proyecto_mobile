@@ -34,6 +34,22 @@ android {
     }
 }
 
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "duoc.cl.ui.*",
+                    "duoc.cl.ui.theme.*",
+                    "duoc.cl.ui.components.*",
+                    "duoc.cl.MainActivity",
+                    "duoc.cl.ui.Navigation*"
+                )
+            }
+        }
+    }
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

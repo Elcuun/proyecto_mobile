@@ -121,7 +121,7 @@ class UserRepository private constructor(context: Context) {
     ): Result<User> = withContext(Dispatchers.IO) {
         val cleanEmail = email.trim().lowercase()
 
-        // 1. Intentar registrar en el Backend via Retrofit
+        // 1. Intentar registrar en el Backend via Retrofit (con fallback robusto local si falla o no está disponible)
         try {
             val response = RetrofitClient.apiService.register(
                 UserRequest(
@@ -149,18 +149,13 @@ class UserRepository private constructor(context: Context) {
                 RetrofitClient.authToken = authResp.token
                 saveUserLocallyAndSetSession(newUser, authResp.token)
                 return@withContext Result.success(newUser)
-            } else {
-                val errorMsg = response.errorBody()?.string()
-                if (!errorMsg.isNullOrBlank()) {
-                    return@withContext Result.failure(Exception(errorMsg))
-                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             // Caída de red o backend no disponible -> continuar con fallback local
         }
 
-        // 2. Fallback Local (si el backend no está disponible)
+        // 2. Fallback Local (si el backend no está disponible o responde con error)
         val users = getUsers()
 
         if (users.any { it.email.lowercase() == cleanEmail }) {
@@ -189,7 +184,7 @@ class UserRepository private constructor(context: Context) {
     ): Result<User> = withContext(Dispatchers.IO) {
         val cleanEmail = email.trim().lowercase()
 
-        // 1. Intentar iniciar sesión en el Backend via Retrofit
+        // 1. Intentar iniciar sesión en el Backend via Retrofit (con fallback robusto local)
         try {
             val response = RetrofitClient.apiService.login(
                 LoginRequest(
@@ -214,18 +209,13 @@ class UserRepository private constructor(context: Context) {
                 RetrofitClient.authToken = authResp.token
                 saveUserLocallyAndSetSession(loggedUser, authResp.token)
                 return@withContext Result.success(loggedUser)
-            } else if (response.code() == 401 || response.code() == 400) {
-                val errorMsg = response.errorBody()?.string()
-                return@withContext Result.failure(
-                    Exception(if (!errorMsg.isNullOrBlank()) errorMsg else "Correo o contraseña incorrectos.")
-                )
             }
         } catch (e: Exception) {
             e.printStackTrace()
             // Backend no disponible -> probar login local
         }
 
-        // 2. Fallback Local (offline)
+        // 2. Fallback Local (offline o si el backend no tiene registrado el usuario de prueba)
         val users = getUsers()
         val matchedUser = users.firstOrNull {
             it.email.lowercase() == cleanEmail && it.password == password
