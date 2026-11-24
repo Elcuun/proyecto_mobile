@@ -122,6 +122,10 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    suspend fun getLogbookById(id: Long): LogbookEntity? {
+        return repository.getLogbookById(id)
+    }
+
     fun toggleCloseLogbook(logbook: LogbookEntity) {
         viewModelScope.launch {
             repository.updateLogbook(logbook.copy(isClosed = !logbook.isClosed))

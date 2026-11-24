@@ -3,6 +3,7 @@ package duoc.cl.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import duoc.cl.data.local.LogbookEntity
 import duoc.cl.data.local.LogbookEntryEntity
 import duoc.cl.data.repository.AppRepository
 import duoc.cl.ui.student.EntryFormState
@@ -67,6 +68,10 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
             learningsError = learningsError
         )
         return copy(isFormValid = valid)
+    }
+
+    suspend fun getLogbookById(id: Long): LogbookEntity? {
+        return repository.getLogbookById(id)
     }
 
     fun submitEntry(logbookId: Long, onResult: (Boolean) -> Unit) {

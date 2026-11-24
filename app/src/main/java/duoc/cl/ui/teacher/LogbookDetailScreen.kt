@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -19,33 +20,48 @@ import duoc.cl.viewmodel.TeacherViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogbookDetailScreen(
-    logbook: LogbookEntity,
+    logbookId: Long,
     viewModel: TeacherViewModel,
     onBack: () -> Unit
 ) {
-    LaunchedEffect(logbook.id) {
-        viewModel.refreshEntries(logbook.id)
+    var logbook by remember { mutableStateOf<LogbookEntity?>(null) }
+
+    LaunchedEffect(logbookId) {
+        logbook = viewModel.getLogbookById(logbookId)
+        viewModel.refreshEntries(logbookId)
     }
 
-    val entries by viewModel.getEntries(logbook.id).collectAsState(initial = emptyList())
-    var selectedEntryForFeedback by remember { mutableStateOf<LogbookEntryEntity?>(null) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    val currentLogbook = logbook
+    if (currentLogbook == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val entries by viewModel.getEntries(currentLogbook.id).collectAsState(initial = emptyList())
+    var selectedEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
+
+    val selectedEntryForFeedback = remember(selectedEntryId, entries) {
+        entries.firstOrNull { it.id == selectedEntryId }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(logbook.title) },
+                title = { Text(currentLogbook.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.toggleCloseLogbook(logbook) }) {
+                    IconButton(onClick = { viewModel.toggleCloseLogbook(currentLogbook) }) {
                         Icon(
-                            imageVector = if (logbook.isClosed) Icons.Default.Lock else Icons.Default.LockOpen,
+                            imageVector = if (currentLogbook.isClosed) Icons.Default.Lock else Icons.Default.LockOpen,
                             contentDescription = "Cerrar/Abrir Bitácora",
-                            tint = if (logbook.isClosed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                            tint = if (currentLogbook.isClosed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         )
                     }
                     IconButton(onClick = { showDeleteConfirmDialog = true }) {
@@ -71,14 +87,14 @@ fun LogbookDetailScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Propósito: ${logbook.purpose}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Propósito: ${currentLogbook.purpose}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Periodo: ${logbook.month}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Text(text = "Periodo: ${currentLogbook.month}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = if (logbook.isClosed) "Estado: Cerrada" else "Estado: Activa y Recibiendo Aportes",
+                        text = if (currentLogbook.isClosed) "Estado: Cerrada" else "Estado: Activa y Recibiendo Aportes",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (logbook.isClosed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        color = if (currentLogbook.isClosed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -100,7 +116,7 @@ fun LogbookDetailScreen(
                     items(entries) { entry ->
                         StudentEntryCard(
                             entry = entry,
-                            onReviewClick = { selectedEntryForFeedback = entry }
+                            onReviewClick = { selectedEntryId = entry.id }
                         )
                     }
                 }
@@ -117,7 +133,7 @@ fun LogbookDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteLogbook(logbook.id) {
+                        viewModel.deleteLogbook(currentLogbook.id) {
                             showDeleteConfirmDialog = false
                             onBack()
                         }
@@ -138,10 +154,10 @@ fun LogbookDetailScreen(
     selectedEntryForFeedback?.let { entry ->
         FeedbackDialog(
             entry = entry,
-            onDismiss = { selectedEntryForFeedback = null },
+            onDismiss = { selectedEntryId = null },
             onSubmit = { feedback, isReviewed ->
                 viewModel.updateFeedback(entry.id, feedback, isReviewed)
-                selectedEntryForFeedback = null
+                selectedEntryId = null
             }
         )
     }
@@ -208,8 +224,8 @@ fun FeedbackDialog(
     onDismiss: () -> Unit,
     onSubmit: (String, Boolean) -> Unit
 ) {
-    var feedbackText by remember { mutableStateOf(entry.feedback ?: "") }
-    var isReviewed by remember { mutableStateOf(entry.isReviewed) }
+    var feedbackText by rememberSaveable { mutableStateOf(entry.feedback ?: "") }
+    var isReviewed by rememberSaveable { mutableStateOf(entry.isReviewed) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

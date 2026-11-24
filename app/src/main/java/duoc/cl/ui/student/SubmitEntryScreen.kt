@@ -35,12 +35,26 @@ import duoc.cl.viewmodel.StudentViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubmitEntryScreen(
-    logbook: LogbookEntity,
+    logbookId: Long,
     currentUser: User?,
     viewModel: StudentViewModel,
     onBack: () -> Unit,
     onSuccess: () -> Unit
 ) {
+    var logbook by remember { mutableStateOf<LogbookEntity?>(null) }
+
+    LaunchedEffect(logbookId) {
+        logbook = viewModel.getLogbookById(logbookId)
+    }
+
+    val currentLogbook = logbook
+    if (currentLogbook == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     val context = LocalContext.current
     val formState by viewModel.entryFormState.collectAsState()
     val scrollState = rememberScrollState()
@@ -120,14 +134,14 @@ fun SubmitEntryScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = logbook.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = currentLogbook.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Propósito: ${logbook.purpose}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Propósito: ${currentLogbook.purpose}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Instrucciones: ${logbook.instructions}", style = MaterialTheme.typography.bodySmall)
-                    if (logbook.guidingQuestions.isNotBlank()) {
+                    Text(text = "Instrucciones: ${currentLogbook.instructions}", style = MaterialTheme.typography.bodySmall)
+                    if (currentLogbook.guidingQuestions.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "Pregunta Guía: ${logbook.guidingQuestions}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(text = "Pregunta Guía: ${currentLogbook.guidingQuestions}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -143,7 +157,11 @@ fun SubmitEntryScreen(
                 singleLine = true
             )
             AnimatedVisibility(visible = formState.studentNameError != null) {
-                Text(text = formState.studentNameError ?: "", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = formState.studentNameError ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             OutlinedTextField(
@@ -156,6 +174,13 @@ fun SubmitEntryScreen(
                 shape = RoundedCornerShape(12.dp),
                 minLines = 2
             )
+            AnimatedVisibility(visible = formState.contentsError != null) {
+                Text(
+                    text = formState.contentsError ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             OutlinedTextField(
                 value = formState.activities,
@@ -167,6 +192,13 @@ fun SubmitEntryScreen(
                 shape = RoundedCornerShape(12.dp),
                 minLines = 2
             )
+            AnimatedVisibility(visible = formState.activitiesError != null) {
+                Text(
+                    text = formState.activitiesError ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             OutlinedTextField(
                 value = formState.learnings,
@@ -178,6 +210,13 @@ fun SubmitEntryScreen(
                 shape = RoundedCornerShape(12.dp),
                 minLines = 2
             )
+            AnimatedVisibility(visible = formState.learningsError != null) {
+                Text(
+                    text = formState.learningsError ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             OutlinedTextField(
                 value = formState.doubts,
@@ -217,49 +256,55 @@ fun SubmitEntryScreen(
 
                 OutlinedButton(
                     onClick = {
-                        locationPermissionLauncher.launch(
-                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-                        )
+                        val fineLocation = Manifest.permission.ACCESS_FINE_LOCATION
+                        val coarseLocation = Manifest.permission.ACCESS_COARSE_LOCATION
+                        if (ContextCompat.checkSelfPermission(context, fineLocation) == PackageManager.PERMISSION_GRANTED ||
+                            ContextCompat.checkSelfPermission(context, coarseLocation) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+                            try {
+                                fusedClient.lastLocation.addOnSuccessListener { loc ->
+                                    if (loc != null) {
+                                        viewModel.setLocation(loc.latitude, loc.longitude)
+                                    }
+                                }
+                            } catch (e: SecurityException) {
+                                e.printStackTrace()
+                            }
+                        } else {
+                            locationPermissionLauncher.launch(arrayOf(fineLocation, coarseLocation))
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(imageVector = Icons.Default.LocationOn, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = if (formState.latitude != null) "GPS OK" else "Obtener GPS")
+                    Text(text = if (formState.latitude != null) "GPS OK" else "Ubicación GPS")
                 }
             }
 
-            AnimatedVisibility(visible = formState.photoUri != null) {
+            AnimatedVisibility(visible = photoBitmap != null) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        .height(180.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (photoBitmap != null) {
-                            Image(
-                                bitmap = photoBitmap.asImageBitmap(),
-                                contentDescription = "Foto capturada",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                                ///aqui es el cambio a fit en caso de  papuuuu
-                            )
-                        } else {
-                            Text("Foto adjuntada exitosamente")
-                        }
+                    if (photoBitmap != null) {
+                        Image(
+                            bitmap = photoBitmap.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
                     }
                 }
             }
 
             AnimatedVisibility(visible = formState.latitude != null) {
                 Text(
-                    text = "Ubicación registrada: Lat ${formState.latitude}, Lon ${formState.longitude}",
+                    text = "Coordenadas GPS: ${formState.latitude}, ${formState.longitude}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -269,21 +314,20 @@ fun SubmitEntryScreen(
 
             Button(
                 onClick = {
-                    viewModel.submitEntry(logbook.id) { success ->
+                    viewModel.submitEntry(currentLogbook.id) { success ->
                         if (success) onSuccess()
                     }
                 },
-                enabled = formState.isFormValid && !logbook.isClosed,
+                enabled = formState.isFormValid && !currentLogbook.isClosed,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp)
             ) {
                 Icon(imageVector = Icons.Default.Send, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = if (logbook.isClosed) "Bitácora Cerrada" else "Enviar Registro Mensual", fontWeight = FontWeight.Bold)
+                Text(text = if (currentLogbook.isClosed) "Bitácora Cerrada" else "Enviar Registro Mensual")
             }
         }
     }
 }
-//esto es por git hub esta raro

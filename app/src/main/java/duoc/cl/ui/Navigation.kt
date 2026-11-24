@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import duoc.cl.data.local.LogbookEntity
 import duoc.cl.data.local.Role
 import duoc.cl.ui.apoderado.ApoderadoScreen
 import duoc.cl.ui.auth.LoginScreen
@@ -32,9 +31,6 @@ fun AppNavigation() {
     val apoderadoViewModel: ApoderadoViewModel = viewModel()
 
     val currentUser by authViewModel.currentUser.collectAsState()
-
-    var activeLogbookForTeacher by remember { mutableStateOf<LogbookEntity?>(null) }
-    var activeLogbookForStudent by remember { mutableStateOf<LogbookEntity?>(null) }
 
     NavHost(navController = navController, startDestination = "role_selection") {
         composable("role_selection") {
@@ -125,8 +121,7 @@ fun AppNavigation() {
                     navController.navigate("create_logbook/$courseId/$subjectId")
                 },
                 onOpenLogbookDetail = { logbook ->
-                    activeLogbookForTeacher = logbook
-                    navController.navigate("logbook_detail")
+                    navController.navigate("logbook_detail/${logbook.id}")
                 }
             )
         }
@@ -149,14 +144,16 @@ fun AppNavigation() {
             )
         }
 
-        composable("logbook_detail") {
-            activeLogbookForTeacher?.let { logbook ->
-                LogbookDetailScreen(
-                    logbook = logbook,
-                    viewModel = teacherViewModel,
-                    onBack = { navController.popBackStack() }
-                )
-            }
+        composable(
+            route = "logbook_detail/{logbookId}",
+            arguments = listOf(navArgument("logbookId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val logbookId = backStackEntry.arguments?.getLong("logbookId") ?: 0L
+            LogbookDetailScreen(
+                logbookId = logbookId,
+                viewModel = teacherViewModel,
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable("student_dashboard") {
@@ -171,22 +168,23 @@ fun AppNavigation() {
                 },
                 onNavigateBack = { navController.popBackStack() },
                 onOpenLogbook = { logbook ->
-                    activeLogbookForStudent = logbook
-                    navController.navigate("submit_entry")
+                    navController.navigate("submit_entry/${logbook.id}")
                 }
             )
         }
 
-        composable("submit_entry") {
-            activeLogbookForStudent?.let { logbook ->
-                SubmitEntryScreen(
-                    logbook = logbook,
-                    currentUser = currentUser,
-                    viewModel = studentViewModel,
-                    onBack = { navController.popBackStack() },
-                    onSuccess = { navController.popBackStack() }
-                )
-            }
+        composable(
+            route = "submit_entry/{logbookId}",
+            arguments = listOf(navArgument("logbookId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val logbookId = backStackEntry.arguments?.getLong("logbookId") ?: 0L
+            SubmitEntryScreen(
+                logbookId = logbookId,
+                currentUser = currentUser,
+                viewModel = studentViewModel,
+                onBack = { navController.popBackStack() },
+                onSuccess = { navController.popBackStack() }
+            )
         }
     }
 }

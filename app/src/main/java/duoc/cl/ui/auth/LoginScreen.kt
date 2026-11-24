@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import duoc.cl.data.local.Role
+import duoc.cl.ui.animation.AppAnimations
 import duoc.cl.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +49,7 @@ fun LoginScreen(
                 title = { Text("Iniciar Sesión - $roleTitle") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -86,7 +88,11 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            AnimatedVisibility(visible = state.generalError != null) {
+            AnimatedVisibility(
+                visible = state.generalError != null,
+                enter = AppAnimations.slideFadeIn,
+                exit = AppAnimations.slideFadeOut
+            ) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -127,7 +133,11 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             )
-            AnimatedVisibility(visible = state.emailError != null) {
+            AnimatedVisibility(
+                visible = state.emailError != null,
+                enter = AppAnimations.slideFadeIn,
+                exit = AppAnimations.slideFadeOut
+            ) {
                 Text(
                     text = state.emailError ?: "",
                     color = MaterialTheme.colorScheme.error,
@@ -161,7 +171,11 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             )
-            AnimatedVisibility(visible = state.passwordError != null) {
+            AnimatedVisibility(
+                visible = state.passwordError != null,
+                enter = AppAnimations.slideFadeIn,
+                exit = AppAnimations.slideFadeOut
+            ) {
                 Text(
                     text = state.passwordError ?: "",
                     color = MaterialTheme.colorScheme.error,
@@ -186,7 +200,7 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Icon(imageVector = Icons.Default.Login, contentDescription = null)
+                    Icon(imageVector = Icons.AutoMirrored.Filled.Login, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "Iniciar Sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }

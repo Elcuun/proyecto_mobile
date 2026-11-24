@@ -37,24 +37,9 @@ android {
 kover {
     reports {
         filters {
-            excludes {
+            includes {
                 classes(
-                    "duoc.cl.MainActivity*",
-                    "duoc.cl.camara.*",
-                    "duoc.cl.ui.Navigation*",
-                    "duoc.cl.ui.components.*",
-                    "duoc.cl.ui.theme.*",
-                    "duoc.cl.ui.role.*",
-                    "duoc.cl.ui.auth.LoginScreen*",
-                    "duoc.cl.ui.auth.RegisterScreen*",
-                    "duoc.cl.ui.student.StudentScreen*",
-                    "duoc.cl.ui.student.SubmitEntryScreen*",
-                    "duoc.cl.ui.teacher.TeacherScreen*",
-                    "duoc.cl.ui.teacher.CreateLogbookScreen*",
-                    "duoc.cl.ui.teacher.LogbookDetailScreen*",
-                    "duoc.cl.ui.apoderado.ApoderadoScreen*",
-                    "duoc.cl.api.RetrofitClient*",
-                    "duoc.cl.api.ApiService*"
+                    "duoc.cl.validaciones.*"
                 )
             }
         }

@@ -15,12 +15,16 @@ object LoginValidations {
     }
 
     fun validateFirstName(name: String): String? {
-        if (name.isBlank()) return "El nombre es obligatorio"
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return "El nombre es obligatorio"
+        if (trimmed.length < 4) return "El nombre debe tener al menos 4 caracteres"
         return null
     }
 
     fun validateLastName(name: String): String? {
-        if (name.isBlank()) return "El apellido es obligatorio"
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return "El apellido es obligatorio"
+        if (trimmed.length < 4) return "El apellido debe tener al menos 4 caracteres"
         return null
     }
 
@@ -33,6 +37,11 @@ object LoginValidations {
     fun validateRegisterPassword(password: String): String? {
         if (password.isBlank()) return "La contraseña es obligatoria"
         if (password.length < 6) return "La contraseña debe tener al menos 6 caracteres"
+        val letters = password.count { it.isLetter() }
+        val digits = password.count { it.isDigit() }
+        if (letters < 2 || digits < 2) {
+            return "La contraseña debe tener al menos 2 letras y 2 números"
+        }
         return null
     }
 
