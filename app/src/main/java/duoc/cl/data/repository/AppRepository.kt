@@ -373,7 +373,11 @@ class AppRepository private constructor(context: Context) {
                 )
                 if (response.isSuccessful && response.body() != null) {
                     val apiEntries = response.body()!!
+                    val localResults = getLocalGuardianEntries(cleanName, cleanEmail)
                     if (apiEntries.isEmpty()) {
+                        if (localResults.isNotEmpty()) {
+                            return@withContext Result.success(localResults)
+                        }
                         return@withContext Result.failure(Exception("No se encontraron entregas para el estudiante consultado."))
                     }
                     val results = mutableListOf<Pair<LogbookEntity, LogbookEntryEntity>>()
@@ -416,8 +420,18 @@ class AppRepository private constructor(context: Context) {
                             results.add(logbook to entry)
                         }
                     }
+                    // Combine API results with any local entries if not already present
+                    for (localPair in localResults) {
+                        if (results.none { it.second.id == localPair.second.id }) {
+                            results.add(localPair)
+                        }
+                    }
                     Result.success(results)
                 } else {
+                    val localResults = getLocalGuardianEntries(cleanName, cleanEmail)
+                    if (localResults.isNotEmpty()) {
+                        return@withContext Result.success(localResults)
+                    }
                     val errorMsg = when (response.code()) {
                         401 -> "Sesión no autorizada o token inválido."
                         404 -> "No se encontró información del alumno."
@@ -426,8 +440,28 @@ class AppRepository private constructor(context: Context) {
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
+                val cleanEmail = email.trim()
+                val cleanName = name.trim()
+                val localResults = getLocalGuardianEntries(cleanName, cleanEmail)
+                if (localResults.isNotEmpty()) {
+                    return@withContext Result.success(localResults)
+                }
                 Result.failure(Exception("Error de conexión: ${e.localizedMessage ?: "Verifique su red"}"))
             }
+        }
+    }
+
+    private fun getLocalGuardianEntries(name: String, email: String): List<Pair<LogbookEntity, LogbookEntryEntity>> {
+        val cleanName = name.lowercase()
+        val cleanEmailPrefix = if (email.contains("@")) email.substringBefore("@").lowercase() else email.lowercase()
+        val matchingEntries = _entries.value.filter { entry ->
+            val student = entry.studentName.lowercase()
+            (cleanName.isNotBlank() && student.contains(cleanName)) ||
+            (cleanEmailPrefix.isNotBlank() && student.contains(cleanEmailPrefix))
+        }
+        return matchingEntries.mapNotNull { entry ->
+            val logbook = _logbooks.value.firstOrNull { it.id == entry.logbookId }
+            if (logbook != null) logbook to entry else null
         }
     }
 

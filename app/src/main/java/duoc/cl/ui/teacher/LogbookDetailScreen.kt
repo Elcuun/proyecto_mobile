@@ -57,7 +57,11 @@ fun LogbookDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.toggleCloseLogbook(currentLogbook) }) {
+                    IconButton(onClick = {
+                        val newClosed = !currentLogbook.isClosed
+                        logbook = currentLogbook.copy(isClosed = newClosed)
+                        viewModel.toggleCloseLogbook(currentLogbook)
+                    }) {
                         Icon(
                             imageVector = if (currentLogbook.isClosed) Icons.Default.Lock else Icons.Default.LockOpen,
                             contentDescription = "Cerrar/Abrir Bitácora",
